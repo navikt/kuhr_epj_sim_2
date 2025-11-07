@@ -26,7 +26,7 @@ async def call_innsending_periodically():
                 )
 
         except Exception as e:
-            print("Error calling endpoint:", e)
+            pass
         await asyncio.sleep(60*60)
 
 # Startup process
