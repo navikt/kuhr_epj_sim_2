@@ -17,5 +17,11 @@ spec:
       cpu: 200m
       memory: 128Mi
 
+  maskinporten:
+    enabled: true
+    scopes:
+      consumes:
+        - name: "nav:kuhr/krav"
+
   envFrom:
     - secret: kuhr-epj-sim-secrets
