@@ -1,0 +1,21 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: kuhr-epj-sim-2
+  namespace: teamkuhr
+spec:
+  ingresses:
+    - https://kuhr-epj-sim-2.intern.dev.nav.no
+  image: {{image}}
+  port: 8080
+  ttl: 3h
+  replicas:
+    max: 1
+    min: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 128Mi
+
+  envFrom:
+    - secret: kuhr-epj-sim-secrets

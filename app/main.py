@@ -12,12 +12,12 @@ from contextlib import asynccontextmanager
 # Init Oracle thick client
 try:
     # windows
-    oracledb.init_oracle_client(lib_dir=r"C:\Workspace\oracleinstaclient\instantclient_23_9")
+    #oracledb.init_oracle_client(lib_dir=r"C:\Workspace\oracleinstaclient\instantclient_23_9")
     # Docker/linux
-    # oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_21_4")
+    oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_21_4")
 
-except oracledb.Error as e:
-    print("Error initializing Oracle Client:", e)
+except oracledb.Error as init_e:
+    print("Error initializing Oracle Client:", init_e)
     exit(1)
 
 # Periodisk jobb
@@ -34,30 +34,30 @@ async def call_innsending_periodically():
                     json={"amount": amount}
                 )
 
-        except Exception as e:
-            pass
+        except Exception as call_e:
+            print(call_e)
         await asyncio.sleep(60*freq)
 
 # Startup process
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(f_app: FastAPI):
 
     # Startup
-    app.state.pool = startup_pool()
+    f_app.state.pool = startup_pool()
     # Start background task
-    app.state.task = asyncio.create_task(call_innsending_periodically())
+    f_app.state.task = asyncio.create_task(call_innsending_periodically())
 
     yield
 
     # Shutdown
     print("Closing database connection pool...")
-    if app.state.pool:
-        app.state.pool.close()
+    if f_app.state.pool:
+        f_app.state.pool.close()
         print("Connection pool closed.")
-    app.state.task.cancel()
+    f_app.state.task.cancel()
 
     try:
-        await app.state.task
+        await f_app.state.task
     except asyncio.CancelledError:
         pass
 

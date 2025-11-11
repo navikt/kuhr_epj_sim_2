@@ -43,11 +43,13 @@ async def send_innsending(data: dict, request: Request, response: Response):
 
     for i in range(iterations):
 
-        # TODO kall faktisk maskinporten
-        token = await hent_maskinporten_token_mock()
+        # Lokal mock
+        maskinporten_token = await hent_maskinporten_token_mock()
+        # Nais
+        # maskinporten_token = await get_maskinporten_token_nais()
 
         # Get kuhr jwk
-        jwk_info = await fetch_jwk(token)
+        jwk_info = await fetch_jwk(maskinporten_token)
 
         # TODO, ekte maskinporten endpoint returnerer annerledes
 
@@ -75,15 +77,15 @@ async def send_innsending(data: dict, request: Request, response: Response):
         compact_jwe = jwetoken.serialize(compact=True)
 
         # KUHR_KRAV_API
-        url = os.getenv("KUHR_KRAV_API_URL")
+        khur_krav_api = os.getenv("KUHR_KRAV_API_URL")
 
         headers = {
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {maskinporten_token}",
             "Content-Type": "application/jose"
         }
 
         async with httpx.AsyncClient() as client:
-            kuhr_response = await client.post(url, content=compact_jwe, headers=headers)
+            kuhr_response = await client.post(khur_krav_api, content=compact_jwe, headers=headers)
 
             # TODO fjern
             print(kuhr_response)

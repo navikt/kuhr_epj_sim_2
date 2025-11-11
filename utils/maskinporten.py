@@ -1,3 +1,4 @@
+import os
 import jwt
 import time
 import httpx
@@ -16,6 +17,26 @@ async def hent_maskinporten_token_mock():
             print(f"An error occurred while requesting {e.request.url!r}: {e}")
         except httpx.HTTPStatusError as e:
             print(f"Error response {e.response.status_code} while requesting {e.request.url!r}")
+
+
+def get_maskinporten_token_nais():
+
+    token_endpoint = os.getenv("NAIS_TOKEN_ENDPOINT")
+
+    if not token_endpoint:
+        raise EnvironmentError("NAIS_TOKEN_ENDPOINT environment variable is not set.")
+
+    payload = {
+        "identity_provider": "maskinporten",
+        "target": "nav:kuhr/krav"
+    }
+
+    headers = {"Content-Type": "application/json"}
+
+    with httpx.Client() as client:
+        response = client.post(token_endpoint, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json().get("access_token")
 
 
 class MaskinportenClient:
