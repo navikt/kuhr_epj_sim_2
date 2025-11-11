@@ -30,7 +30,7 @@ async def call_innsending_periodically():
         try:
             async with httpx.AsyncClient() as client:
                 await client.post(
-                    "http://127.0.0.1:8000/innsending/send",
+                    "http://127.0.0.1:8080/innsending/send",
                     json={"amount": amount}
                 )
 
