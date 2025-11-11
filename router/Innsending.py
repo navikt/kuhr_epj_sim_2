@@ -1,13 +1,14 @@
-import asyncio
+import os
 import json
 import httpx
+import asyncio
 from fastapi import APIRouter
 from jwcrypto import jwe, jwk
 from jwcrypto.common import json_encode
 from starlette import status
 from fastapi import Request, Response
 from utils.bkm_generator import generer_bkm
-from utils.jwk import fetch_jwks
+from utils.jwk import fetch_jwk
 from utils.maskinporten import hent_maskinporten_token_mock
 
 router = APIRouter(prefix="/innsending", tags=["innsending"])
@@ -23,18 +24,14 @@ async def send_innsending(data: dict, request: Request, response: Response):
         )
 
     """
-        1. Henter maskinporten-token
+        1. Henter maskinporten-token [nav:kuhr/krav]
         2. Bruker den til å hente kuhr-jwk
         3. Generer syntetisk kombinasjon av pasienter/profiler/takster
-        4. Krypterer payload (JWE)
+        4. Krypterer payload
         4. Kaller kuhr_krav API
     """
 
-    # Innsending
-    # POST /v1/process/sendinnbehandlerkravmelding
-    # Sjekk status på innsending
-    # GET /v1/data/behandlerkravmelding
-    # PORTS
+    # PORT
     # EPJ_SIM           8000
     # Kuhr-krav-api     8080
     # kuhr-jwk          8081
@@ -46,10 +43,13 @@ async def send_innsending(data: dict, request: Request, response: Response):
 
     for i in range(iterations):
 
+        # TODO kall faktisk maskinporten
         token = await hent_maskinporten_token_mock()
 
         # Get kuhr jwk
-        jwk_info = await fetch_jwks('http://localhost:8081/jwk', token)
+        jwk_info = await fetch_jwk(token)
+
+        # TODO, ekte maskinporten endpoint returnerer annerledes
 
         key_data = jwk_info['keys'][0]
 
@@ -70,12 +70,12 @@ async def send_innsending(data: dict, request: Request, response: Response):
 
         # Convert payload dict -> bytes
         plaintext = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-        jwetoken = jwe.JWE(plaintext, json_encode(protected_header))
+        jwetoken  = jwe.JWE(plaintext, json_encode(protected_header))
         jwetoken.add_recipient(rsa_key)
         compact_jwe = jwetoken.serialize(compact=True)
 
         # KUHR_KRAV_API
-        url = "http://localhost:8080/v1/process/sendinnbehandlerkravmelding"
+        url = os.getenv("KUHR_KRAV_API_URL")
 
         headers = {
             "Authorization": f"Bearer {token}",
@@ -84,6 +84,8 @@ async def send_innsending(data: dict, request: Request, response: Response):
 
         async with httpx.AsyncClient() as client:
             kuhr_response = await client.post(url, content=compact_jwe, headers=headers)
+
+            # TODO fjern
             print(kuhr_response)
             print(kuhr_response.text)
 

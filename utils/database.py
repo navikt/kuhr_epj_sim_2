@@ -3,17 +3,15 @@ import oracledb
 from dotenv import load_dotenv
 from typing import Optional
 
-
 load_dotenv()
-
 
 def startup_pool() -> oracledb.ConnectionPool:
     print("Creating database connection pool...")
     try:
         pool: oracledb.ConnectionPool = oracledb.create_pool(
-            user=os.getenv("USER"),
-            password=os.getenv("PASSWORD"),
-            dsn=os.getenv("THIN"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            dsn=os.getenv("DB_THIN_URL"),
             min=2,
             max=5,
             increment=1
@@ -23,7 +21,6 @@ def startup_pool() -> oracledb.ConnectionPool:
     except oracledb.Error as e:
         print("Error creating database connection pool:", e)
         raise
-
 
 def get_connection(pool: oracledb.ConnectionPool) -> oracledb.Connection:
     conn: Optional[oracledb.Connection] = None

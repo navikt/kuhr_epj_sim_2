@@ -1,3 +1,4 @@
+import os
 import httpx
 import asyncio
 import uvicorn
@@ -10,24 +11,32 @@ from contextlib import asynccontextmanager
 
 # Init Oracle thick client
 try:
+    # windows
     oracledb.init_oracle_client(lib_dir=r"C:\Workspace\oracleinstaclient\instantclient_23_9")
+    # Docker/linux
+    # oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_21_4")
+
 except oracledb.Error as e:
     print("Error initializing Oracle Client:", e)
     exit(1)
 
 # Periodisk jobb
 async def call_innsending_periodically():
+
+    freq   = int(os.getenv("CALL_FREQUENCY"))
+    amount = int(os.getenv("CALL_AMOUNT"))
+
     while True:
         try:
             async with httpx.AsyncClient() as client:
                 await client.post(
                     "http://127.0.0.1:8000/innsending/send",
-                    json={"amount": 1}
+                    json={"amount": amount}
                 )
 
         except Exception as e:
             pass
-        await asyncio.sleep(60*60)
+        await asyncio.sleep(60*freq)
 
 # Startup process
 @asynccontextmanager
