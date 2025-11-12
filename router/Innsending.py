@@ -9,7 +9,7 @@ from starlette import status
 from fastapi import Request, Response
 from utils.bkm_generator import generer_bkm
 from utils.jwk import fetch_jwk
-from utils.maskinporten import hent_maskinporten_token_mock
+from utils.maskinporten import hent_maskinporten_token_mock, get_maskinporten_token_nais
 
 router = APIRouter(prefix="/innsending", tags=["innsending"])
 
@@ -44,9 +44,9 @@ async def send_innsending(data: dict, request: Request, response: Response):
     for i in range(iterations):
 
         # Lokal mock
-        maskinporten_token = await hent_maskinporten_token_mock()
+        # maskinporten_token = await hent_maskinporten_token_mock()
         # Nais
-        # maskinporten_token = await get_maskinporten_token_nais()
+        maskinporten_token = await get_maskinporten_token_nais()
 
         # Get kuhr jwk
         jwk_info = await fetch_jwk(maskinporten_token)
