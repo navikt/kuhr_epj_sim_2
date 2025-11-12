@@ -85,8 +85,4 @@ async def send_innsending(data: dict, request: Request, response: Response):
         async with httpx.AsyncClient() as client:
             kuhr_response = await client.post(khur_krav_api, content=compact_jwe, headers=headers)
 
-            # TODO fjern
-            print(kuhr_response)
-            print(kuhr_response.text)
-
         await asyncio.sleep(1)
