@@ -66,7 +66,11 @@ async def lifespan(f_app: FastAPI):
 # Entrypoint
 app = FastAPI(lifespan=lifespan)
 
-@app.post("/health")
+@app.post("/ready")
+async def health_check():
+    return "ok"
+
+@app.post("/alive")
 async def health_check():
     return "ok"
 

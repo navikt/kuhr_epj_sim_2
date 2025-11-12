@@ -24,10 +24,16 @@ spec:
         - name: "nav:kuhr/krav"
 
   readiness:
-    path: /health
+    path: /ready
     port: 8080
-    initialDelay: 60
-    timeout: 10
+    initialDelay: 30
+    timeout: 5
+
+  liveness:
+    path: /alive
+    port: 8080
+    initialDelay: 30
+    timeout: 5
 
   envFrom:
     - secret: kuhr-epj-sim-secrets
