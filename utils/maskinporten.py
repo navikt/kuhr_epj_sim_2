@@ -19,8 +19,7 @@ async def hent_maskinporten_token_mock():
             print(f"Error response {e.response.status_code} while requesting {e.request.url!r}")
 
 
-def get_maskinporten_token_nais():
-
+async def get_maskinporten_token_nais():
     token_endpoint = os.getenv("NAIS_TOKEN_ENDPOINT")
 
     if not token_endpoint:
@@ -33,8 +32,8 @@ def get_maskinporten_token_nais():
 
     headers = {"Content-Type": "application/json"}
 
-    with httpx.Client() as client:
-        response = client.post(token_endpoint, json=payload, headers=headers)
+    async with httpx.AsyncClient() as client:
+        response = await client.post(token_endpoint, json=payload, headers=headers)
         response.raise_for_status()
         return response.json().get("access_token")
 

@@ -48,10 +48,8 @@ async def send_innsending(data: dict, request: Request, response: Response):
         # Nais
         maskinporten_token = await get_maskinporten_token_nais()
 
-        # Get kuhr jwk
+        # Get kuhr JWK
         jwk_info = await fetch_jwk(maskinporten_token)
-
-        # TODO, ekte maskinporten endpoint returnerer annerledes
 
         key_data = jwk_info['keys'][0]
 
