@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from utils.database import startup_pool
 from contextlib import asynccontextmanager
 
+load_dotenv()
+
 # Init Oracle thick client
 try:
     # windows
@@ -63,8 +65,12 @@ async def lifespan(f_app: FastAPI):
 
 # Entrypoint
 app = FastAPI(lifespan=lifespan)
+
+@app.post("/health")
+async def health_check():
+    return "ok"
+
 app.include_router(Innsending.router)
 
 if __name__ == "__main__":
-    load_dotenv()
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True, log_level="info")
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8080, reload=True, log_level="info")

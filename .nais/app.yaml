@@ -23,5 +23,11 @@ spec:
       consumes:
         - name: "nav:kuhr/krav"
 
+  readiness:
+    path: /health
+    port: 8080
+    initialDelay: 60
+    timeout: 10
+
   envFrom:
     - secret: kuhr-epj-sim-secrets
