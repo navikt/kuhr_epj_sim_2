@@ -26,14 +26,16 @@ spec:
   readiness:
     path: /ready
     port: 8080
+    periodSeconds: 7200
     initialDelay: 30
-    timeout: 5
+    timeout: 7200
 
   liveness:
     path: /alive
     port: 8080
+    periodSeconds: 7200
     initialDelay: 30
-    timeout: 5
+    timeout: 7200
 
   envFrom:
     - secret: kuhr-epj-sim-secrets
