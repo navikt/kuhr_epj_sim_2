@@ -1,0 +1,2 @@
+1. Er cfg.debug satt til False?
+2. Er log_level satt til ERROR i main?

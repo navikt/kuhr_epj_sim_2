@@ -13,10 +13,10 @@ load_dotenv()
 
 # Init Oracle thick client
 try:
-    # windows
-    #oracledb.init_oracle_client(lib_dir=r"C:\Workspace\oracleinstaclient\instantclient_23_9")
-    # Docker/linux
-    oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_21_4")
+    if os.getenv("MILJO") == "LOCAL":
+        oracledb.init_oracle_client(lib_dir=r"C:\Workspace\oracleinstaclient\instantclient_23_9")
+    else:
+        oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_21_4")
 
 except oracledb.Error as init_e:
     print("Error initializing Oracle Client:", init_e)
@@ -35,7 +35,6 @@ async def call_innsending_periodically():
                     "http://127.0.0.1:8080/innsending/send",
                     json={"amount": amount}
                 )
-
         except Exception as call_e:
             print(call_e)
         await asyncio.sleep(60*freq)
@@ -46,6 +45,9 @@ async def lifespan(f_app: FastAPI):
 
     # Startup
     f_app.state.pool = startup_pool()
+
+    f_app.state.run_loop = True
+
     # Start background task
     f_app.state.task = asyncio.create_task(call_innsending_periodically())
 
