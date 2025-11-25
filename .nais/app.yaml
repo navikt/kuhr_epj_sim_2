@@ -8,7 +8,6 @@ spec:
     - https://kuhr-epj-sim-2.intern.dev.nav.no
   image: {{image}}
   port: 8080
-  ttl: 3h
   replicas:
     max: 1
     min: 1
