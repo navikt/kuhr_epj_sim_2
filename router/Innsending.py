@@ -77,7 +77,7 @@ async def send_innsending(data: dict, request: Request, response: Response, back
         compact_jwe = jwetoken.serialize(compact=True)
 
         # KUHR_KRAV_API
-        khur_krav_api = os.getenv("KUHR_KRAV_API_URL") + "/process/sendinnbehandlerkravmelding"
+        khur_krav_api = os.getenv("KUHR_KRAV_API_URL") + "/v1/process/sendinnbehandlerkravmelding"
 
         headers = {
             "Authorization": f"Bearer {maskinporten_token}",
@@ -86,6 +86,7 @@ async def send_innsending(data: dict, request: Request, response: Response, back
 
         async with httpx.AsyncClient() as client:
             kuhr_response = await client.post(khur_krav_api, content=compact_jwe, headers=headers)
+
             response_json = kuhr_response.json()
 
             # fields for background task
@@ -115,7 +116,7 @@ async def sjekk_innsending_status(request: Request, bkmId: str, bkmStatus: str, 
             """)
             bot.close()
 
-        url = os.getenv("KUHR_KRAV_API_URL") + "/data/behandlerkravmelding/" + bkmId
+        url = os.getenv("KUHR_KRAV_API_URL") + "/v1/data/behandlerkravmelding/" + bkmId
 
         headers = {
             "Authorization": f"Bearer {maskinporten_token}",
