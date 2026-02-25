@@ -13,7 +13,7 @@ load_dotenv()
 
 # Init Oracle thick client
 try:
-    if os.getenv("MILJO") == "LOCAL":
+    if os.getenv("MILJO") == "WINDOWS":
         oracledb.init_oracle_client(lib_dir=r"C:\Workspace\oracleinstaclient\instantclient_23_9")
     else:
         oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_21_4")

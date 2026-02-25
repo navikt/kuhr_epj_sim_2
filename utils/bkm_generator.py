@@ -44,7 +44,8 @@ async def generer_bkm(request: Request, response: Response):
     belop = random_int_between(50, 1000)
 
     payload = {
-        "praksisId": "1004326178",
+        "praksisId": "1004326289",
+
         "behandlerkrav": {
             "regninger": [
                 {

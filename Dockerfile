@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get -y upgrade && apt-get install -y \
     wget unzip libaio1 libnsl2 build-essential && \
     mkdir -p /opt/oracle && \
     cd /opt/oracle && \

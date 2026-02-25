@@ -8,6 +8,7 @@ from jwcrypto.common import json_encode
 from starlette import status
 from fastapi import Request, Response
 from utils.bkm_generator import generer_bkm
+from utils.helseid import get_helseid_token_ttt, generate_dpop_proof
 from utils.jwk import fetch_jwk
 from utils.maskinporten import hent_maskinporten_token_mock, get_maskinporten_token_nais
 from fastapi import BackgroundTasks
@@ -34,27 +35,32 @@ async def send_innsending(data: dict, request: Request, response: Response, back
         4. Kaller kuhr_krav API
     """
 
-    # PORT
-    # EPJ_SIM           8080
-    # Maskinporten Mock 8082
-    # kuhr-jwk          8089
-    # Kuhr-krav-api     8090
-    # Hent token med scope nav:kuhr/krav
+    ITERATIONS = int(data['amount'])
+    USE_MASKINPORTEN = True
+    ALTERNATE = False
 
-    iterations = int(data['amount'])
+    for i in range(ITERATIONS):
 
-    for i in range(iterations):
+        current_token = None
+        auth_header = None
+        dpop_header = None
+        is_helseid = not USE_MASKINPORTEN
 
-        if os.getenv("MILJO") == "LOCAL":
-            maskinporten_token = await hent_maskinporten_token_mock()
+        if USE_MASKINPORTEN:
+            if os.getenv("MILJO") == "WINDOWS":
+                current_token = await hent_maskinporten_token_mock()
+            else:
+                current_token = await get_maskinporten_token_nais()
+            auth_header = f"Bearer {current_token}"
         else:
-            maskinporten_token = await get_maskinporten_token_nais()
+            current_token = await get_helseid_token_ttt()
+            auth_header = f"DPoP {current_token}"
 
         # Get kuhr JWK
-        jwk_info = await fetch_jwk(maskinporten_token)
+        jwk_info = await fetch_jwk(auth_header, is_helseid, current_token)
 
+        # Keys
         key_data = jwk_info['keys'][0]
-
         rsa_key = jwk.JWK(**{
             "kty": key_data["kty"],
             "n":   key_data["n"],
@@ -77,17 +83,32 @@ async def send_innsending(data: dict, request: Request, response: Response, back
         compact_jwe = jwetoken.serialize(compact=True)
 
         # KUHR_KRAV_API
-        khur_krav_api = os.getenv("KUHR_KRAV_API_URL") + "/v1/process/sendinnbehandlerkravmelding"
+        if is_helseid:
+            khur_krav_api = os.getenv("KUHR_KRAV_API_URL") + "/helseid/v1/process/sendinnbehandlerkravmelding"
+        else:
+            khur_krav_api = os.getenv("KUHR_KRAV_API_URL") + "/maskinporten/v1/process/sendinnbehandlerkravmelding"
 
         headers = {
-            "Authorization": f"Bearer {maskinporten_token}",
+            "Authorization": auth_header,
             "Content-Type": "application/jose"
         }
+
+        # 3. Add DPoP Proof if using HelseID
+        if is_helseid:
+            # This generates a fresh proof for this specific API call
+            target_url = os.getenv("KUHR_KRAV_API_URL") + "/helseid/v1/jwk"
+            headers["DPoP"] = generate_dpop_proof("GET", target_url, current_token)
+
+        if ALTERNATE:
+            USE_MASKINPORTEN = not USE_MASKINPORTEN
 
         async with httpx.AsyncClient() as client:
             kuhr_response = await client.post(khur_krav_api, content=compact_jwe, headers=headers)
 
             response_json = kuhr_response.json()
+
+            if debug:
+                print(response_json)
 
             # fields for background task
             request_status_code = kuhr_response.status_code
@@ -101,20 +122,24 @@ async def sjekk_innsending_status(request: Request, bkmId: str, bkmStatus: str, 
 
     await asyncio.sleep(10)
 
+    log_with_bot = False
+
     try:
-        if os.getenv("MILJO") == "LOCAL":
+        if os.getenv("MILJO") == "WINDOWS":
             maskinporten_token = await hent_maskinporten_token_mock()
         else:
             maskinporten_token = await get_maskinporten_token_nais()
 
         if not maskinporten_token:
             request.app.state.keep_running = False
-            bot = SlackBot()
-            bot.send_message(f"""
-            Failed to obtain maskinporten token for in kuhr_epj_sim_2.
-            Stopping periodic task for now, pod needs to be redeployed.
-            """)
-            bot.close()
+
+            if log_with_bot:
+                bot = SlackBot()
+                bot.send_message(f"""
+                Failed to obtain maskinporten token for in kuhr_epj_sim_2.
+                Stopping periodic task for now, pod needs to be redeployed.
+                """)
+                bot.close()
 
         url = os.getenv("KUHR_KRAV_API_URL") + "/v1/data/behandlerkravmelding/" + bkmId
 
@@ -133,7 +158,7 @@ async def sjekk_innsending_status(request: Request, bkmId: str, bkmStatus: str, 
             kontrollstatus = data.get("kontrollstatus")
             utbetalingsstatus = data.get("utbetalingsstatus")
 
-            if meldingsstatus == "feil_i_melding":
+            if meldingsstatus == "feil_i_melding" and log_with_bot:
                 bot = SlackBot()
                 bot.send_message(f"""
                 feil_i_melding detected for bkm_id: {bkmId} in kuhr_epj_sim_2 during status check.
@@ -151,22 +176,26 @@ async def sjekk_innsending_status(request: Request, bkmId: str, bkmStatus: str, 
     # HTTP exception
     except httpx.HTTPStatusError as e:
         request.app.state.keep_running = False
-        bot = SlackBot()
-        bot.send_message(f"""
-        HTTP error during status check for bkm_id: {bkmId} in kuhr_epj_sim_2.
-        Exception details: {e}
-        Stopping periodic task for now, pod needs to be redeployed.
-        """)
-        bot.close()
+
+        if log_with_bot:
+            bot = SlackBot()
+            bot.send_message(f"""
+            HTTP error during status check for bkm_id: {bkmId} in kuhr_epj_sim_2.
+            Exception details: {e}
+            Stopping periodic task for now, pod needs to be redeployed.
+            """)
+            bot.close()
 
     # Generell exception
     except Exception as e:
         print(f"Unexpected error during status check for {bkmId}: {e}")
         request.app.state.keep_running = False
-        bot = SlackBot()
-        bot.send_message(f"""
-        An exception has occured for bkm_id: {bkmId} in kuhr_epj_sim_2 during status check.
-        Exception details: {e}
-        Stopping periodic task for now, pod needs to be redeployed.
-        """)
-        bot.close()
+
+        if log_with_bot:
+            bot = SlackBot()
+            bot.send_message(f"""
+            An exception has occured for bkm_id: {bkmId} in kuhr_epj_sim_2 during status check.
+            Exception details: {e}
+            Stopping periodic task for now, pod needs to be redeployed.
+            """)
+            bot.close()
