@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.11.8-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -7,6 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Combine install, setup, and cleanup in one layer
 RUN apt-get update && apt-get -y upgrade && apt-get install -y \
     wget unzip libaio1 libnsl2 build-essential && \
     mkdir -p /opt/oracle && \
@@ -16,6 +17,9 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y \
     rm instantclient-basiclite-linux.x64-21.4.0.0.0dbru.zip && \
     echo "/opt/oracle/instantclient_21_4" > /etc/ld.so.conf.d/oracle-instantclient.conf && \
     ldconfig && \
+    # --- Cleanup Section ---
+    apt-get purge -y wget unzip build-essential xz-utils && \
+    apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
