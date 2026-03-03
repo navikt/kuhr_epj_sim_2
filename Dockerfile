@@ -8,8 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Combine install, setup, and cleanup in one layer
-RUN apt-get update && apt-get -y upgrade && apt-get install -y \
-    wget unzip libaio1 libnsl2 build-essential && \
+RUN apt-get update && \
+    # Explicitly upgrade openssl and libssl3 to ensure CVE-2024-5535 is patched
+    apt-get install -y --no-install-recommends openssl libssl3 && \
+    apt-get -y upgrade && \
+    apt-get install -y wget unzip libaio1 libnsl2 build-essential && \
     mkdir -p /opt/oracle && \
     cd /opt/oracle && \
     wget https://download.oracle.com/otn_software/linux/instantclient/214000/instantclient-basiclite-linux.x64-21.4.0.0.0dbru.zip && \
